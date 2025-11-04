@@ -916,3 +916,136 @@ Tamam, CSS bağımlılığı kaldırıldı ve tüm stiller inline hale getirildi
 
 
 generated - ai
+
+
+
+custom 
+
+
+Customize
+Show Icon Pattern
+
+
+Show User Info
+
+
+Show BG Gradient
+
+
+Enable Mobile Tilt
+
+
+Props
+Property	Type	Default	Description
+avatarUrl
+string
+
+"<Placeholder for avatar URL>"
+URL for the main avatar image displayed on the card
+
+iconUrl
+string
+
+"<Placeholder for icon URL>"
+Optional URL for an icon pattern overlay on the card background
+
+grainUrl
+string
+
+"<Placeholder for grain URL>"
+Optional URL for a grain texture overlay effect
+
+behindGradient
+string
+
+undefined
+Custom CSS gradient string for the background gradient effect
+
+innerGradient
+string
+
+undefined
+Custom CSS gradient string for the inner card gradient
+
+showBehindGradient
+boolean
+
+true
+Whether to display the background gradient effect
+
+className
+string
+
+""
+Additional CSS classes to apply to the card wrapper
+
+enableTilt
+boolean
+
+true
+Enable or disable the 3D tilt effect on mouse hover
+
+enableMobileTilt
+boolean
+
+false
+Enable or disable the 3D tilt effect on mobile devices
+
+mobileTiltSensitivity
+number
+
+5
+Sensitivity of the 3D tilt effect on mobile devices
+
+miniAvatarUrl
+string
+
+undefined
+Optional URL for a smaller avatar in the user info section
+
+name
+string
+
+"Javi A. Torres"
+User's display name
+
+title
+string
+
+"Software Engineer"
+User's job title or role
+
+handle
+string
+
+"javicodes"
+User's handle or username (displayed with @ prefix)
+
+status
+string
+
+"Online"
+User's current status
+
+contactText
+string
+
+"Contact"
+Text displayed on the contact button
+
+showUserInfo
+boolean
+
+true
+Whether to display the user information section
+
+onContactClick
+function
+
+undefined
+Callback function called when the contact button is clicked
+
+
+Random Color Button
+
+gemini - replit - chatgpt - emergent
