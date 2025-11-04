@@ -1,0 +1,479 @@
+import React, { useRef, useEffect, useState, useCallback } from 'react';
+
+// GooeyNav Component Definition
+const GooeyNav = ({
+    items,
+    animationTime = 600,
+    particleCount = 15,
+    particleDistances = [90, 10],
+    particleR = 100,
+    timeVariance = 300,
+    colors = [220, 240, 260, 280, 300, 320], // Uses HSL hues for particle colors
+    initialActiveIndex = 0
+}) => {
+    const containerRef = useRef(null);
+    const navRef = useRef(null);
+    const filterRef = useRef(null);
+    const textRef = useRef(null);
+    const [activeIndex, setActiveIndex] = useState(initialActiveIndex); 
+
+    // Helper to add a bit of randomness
+    const noise = (n = 1) => n / 2 - Math.random() * n;
+
+    // Calculates X and Y coordinates on a circle, with a bit of noise
+    const getXY = useCallback((distance, pointIndex, totalPoints) => {
+        const angle = ((360 + noise(8)) / totalPoints) * pointIndex * (Math.PI / 180);
+        return [distance * Math.cos(angle), distance * Math.sin(angle)];
+    }, []);
+
+    // Creates properties for a single particle animation
+    const createParticle = useCallback((i, t, d, r) => {
+        let rotate = noise(r / 10);
+        return {
+            start: getXY(d[0], particleCount - i, particleCount),
+            end: getXY(d[1] + noise(7), particleCount - i, particleCount),
+            time: t,
+            scale: 1 + noise(0.2),
+            color: colors[Math.floor(Math.random() * colors.length)],
+            rotate: rotate > 0 ? (rotate + r / 20) * 10 : (rotate - r / 20) * 10
+        };
+    }, [getXY, particleCount, colors]);
+
+    // Generates and appends particles to the effect element
+    const makeParticles = useCallback(element => {
+        const d = particleDistances;
+        const r = particleR;
+        const bubbleTime = animationTime * 2 + timeVariance;
+        element.style.setProperty('--time', `${bubbleTime}ms`);
+
+        // Clear existing particles to prevent buildup
+        Array.from(element.querySelectorAll('.particle')).forEach(p => element.removeChild(p));
+
+        for (let i = 0; i < particleCount; i++) {
+            const t = animationTime * 2 + noise(timeVariance * 2);
+            const p = createParticle(i, t, d, r);
+
+            // Stagger particle creation for a more organic explosion
+            setTimeout(() => {
+                const particle = document.createElement('span');
+                const point = document.createElement('span');
+                
+                particle.classList.add('particle');
+                
+                // Set CSS variables for animation
+                particle.style.setProperty('--start-x', `${p.start[0]}px`);
+                particle.style.setProperty('--start-y', `${p.start[1]}px`);
+                particle.style.setProperty('--end-x', `${p.end[0]}px`);
+                particle.style.setProperty('--end-y', `${p.end[1]}px`);
+                particle.style.setProperty('--time', `${p.time}ms`);
+                particle.style.setProperty('--scale', `${p.scale}`);
+                particle.style.setProperty('--color', `var(--color-${p.color})`);
+                particle.style.setProperty('--rotate', `${p.rotate}deg`);
+
+                point.classList.add('point');
+                particle.appendChild(point);
+                element.appendChild(particle);
+
+                // Remove particle after its animation is done
+                setTimeout(() => {
+                    try {
+                        element.removeChild(particle);
+                    } catch (e) { /* Ignore errors if already removed */ }
+                }, t + 20); 
+            }, i * 10); 
+        }
+    }, [particleDistances, particleR, animationTime, timeVariance, particleCount, createParticle]);
+
+    // Updates the position and size of the active pill effect
+    const updateEffectPosition = useCallback(element => {
+        if (!containerRef.current || !filterRef.current || !textRef.current || !element) return;
+        
+        const containerRect = containerRef.current.getBoundingClientRect();
+        const pos = element.getBoundingClientRect();
+
+        // Calculate positions relative to the container for accurate placement
+        const styles = {
+            left: `${pos.left - containerRect.left}px`,
+            top: `${pos.top - containerRect.top}px`,
+            width: `${pos.width}px`,
+            height: `${pos.height}px`,
+            transitionDuration: `${animationTime}ms`
+        };
+        
+        Object.assign(filterRef.current.style, styles);
+        Object.assign(textRef.current.style, styles);
+        
+        // Update text content and padding
+        const linkElement = element.querySelector('a');
+        if (linkElement) {
+            textRef.current.innerText = linkElement.innerText;
+            textRef.current.style.padding = window.getComputedStyle(linkElement).padding;
+        }
+    }, [animationTime]);
+
+    // Handles user clicking or pressing Enter/Space on a navigation item
+    const handleClick = useCallback((e, index) => {
+        e.preventDefault(); 
+        
+        const liEl = e.currentTarget.parentElement;
+        if (activeIndex === index || !liEl) return;
+
+        setActiveIndex(index);
+        updateEffectPosition(liEl);
+
+        if (filterRef.current) {
+            makeParticles(filterRef.current);
+        }
+
+        if (textRef.current) {
+            textRef.current.classList.remove('active');
+            // Force reflow/repaint to re-trigger the CSS animation
+            void textRef.current.offsetWidth; 
+            textRef.current.classList.add('active');
+        }
+    }, [activeIndex, makeParticles, updateEffectPosition]);
+
+    // Initial setup (positioning) and resize handling
+    useEffect(() => {
+        if (!navRef.current || !containerRef.current) return;
+        
+        // Find the initially active list item
+        const activeLi = navRef.current.querySelector(`li:nth-child(${initialActiveIndex + 1})`);
+        
+        if (activeLi) {
+            updateEffectPosition(activeLi);
+            textRef.current?.classList.add('active');
+        }
+
+        // Set up a ResizeObserver for responsive behavior
+        const resizeObserver = new ResizeObserver(() => {
+            const currentActiveLi = navRef.current?.querySelector(`li:nth-child(${activeIndex + 1})`);
+            if (currentActiveLi) {
+                updateEffectPosition(currentActiveLi);
+            }
+        });
+
+        resizeObserver.observe(containerRef.current);
+        
+        return () => resizeObserver.disconnect();
+    }, [activeIndex, initialActiveIndex, updateEffectPosition]);
+
+    return (
+        <div className="gooey-nav-container" ref={containerRef} style={{'--animation-time': `${animationTime}ms`}}>
+            <nav>
+                <ul ref={navRef}>
+                    {items.map((item, index) => (
+                        <li 
+                            key={index} 
+                            className={activeIndex === index ? 'active' : ''}
+                            role="menuitem"
+                            tabIndex={0}
+                            onClick={e => handleClick(e, index)}
+                            onKeyDown={e => {
+                                if (e.key === 'Enter' || e.key === ' ') {
+                                    e.preventDefault();
+                                    handleClick(e, index);
+                                }
+                            }}
+                        >
+                            <a 
+                                href={item.href} 
+                                tabIndex={-1} 
+                            >
+                                {item.label}
+                            </a>
+                        </li>
+                    ))}
+                </ul>
+            </nav>
+            <span className="effect filter" ref={filterRef} />
+            <span className="effect text" ref={textRef} />
+        </div>
+    );
+};
+
+// Main App Component (Default Export)
+const App = () => {
+    // Navigation items
+    const items = [
+        { label: "Home", href: "#home" },
+        { label: "About", href: "#about" },
+        { label: "Features", href: "#features" },
+        { label: "Blog", href: "#blog" },
+        { label: "Contact", href: "#contact" },
+    ];
+    
+    return (
+        <div className="min-h-screen bg-gray-950 flex flex-col items-center pt-24 pb-8 font-inter">
+            {/* Tailwind CSS CDN'ini sadece bir kez dahil ediyoruz */}
+            <script src="https://cdn.tailwindcss.com"></script>
+
+            {/* Uygulama Başlığı */}
+            <h1 className="text-4xl font-extrabold text-white mb-12 tracking-tight">ANAN Navigation Bar</h1>
+            <p className="text-gray-400 mb-8 text-center px-4">Bir sekmeye tıklayarak akıcı hareketi ve parçacık efektini görün.</p>
+            
+            {/* GooeyNav için kapsayıcı */}
+            {/* DÜZELTME 1: Navigasyon kapsayıcısını opak yaptık (bg-gray-800/80 -> bg-gray-800) */}
+            <div className="relative p-2 rounded-[50px] shadow-2xl shadow-purple-500/50 bg-gray-800">
+                <GooeyNav
+                    items={items}
+                    particleCount={25}
+                    particleDistances={[100, 15]}
+                    particleR={150}
+                    initialActiveIndex={2}
+                    animationTime={600}
+                    timeVariance={300}
+                    colors={[220, 260, 300, 340, 30, 60]} 
+                />
+            </div>
+            
+            {/* Tüm özel CSS'i tek bir stil bloğunda */}
+            <style>{`
+                @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap');
+                
+                *:focus-visible {
+                    outline: 2px solid #60a5fa; 
+                    outline-offset: 2px;
+                    border-radius: 9999px;
+                }
+                
+                :root {
+                    font-family: 'Inter', sans-serif;
+                    --color-220: hsl(220, 90%, 75%);
+                    --color-260: hsl(260, 90%, 75%);
+                    --color-300: hsl(300, 90%, 75%);
+                    --color-340: hsl(340, 90%, 75%);
+                    --color-30: hsl(30, 90%, 75%);
+                    --color-60: hsl(60, 90%, 75%);
+                    
+                    --linear-ease: linear(
+                        0, 0.068, 0.19 2.7%, 0.804 8.1%, 1.037, 1.199 13.2%, 
+                        1.245, 1.27 15.8%, 1.274, 1.272 17.4%, 1.249 19.1%, 
+                        0.996 28%, 0.949, 0.928 33.3%, 0.926, 0.933 36.8%, 
+                        1.001 45.6%, 1.013, 1.019 50.8%, 1.018 54.4%, 1 63.1%, 
+                        0.995 68%, 1.001 85%, 1
+                    );
+                }
+
+                .gooey-nav-container {
+                    position: relative;
+                    --transition-time: var(--animation-time, 600ms);
+                }
+
+                .gooey-nav-container nav {
+                    display: flex;
+                    position: relative;
+                    transform: translate3d(0, 0, 0.01px);
+                }
+
+                .gooey-nav-container nav ul {
+                    display: flex;
+                    gap: 1.5rem; 
+                    list-style: none;
+                    padding: 0 0.5rem;
+                    margin: 0;
+                    position: relative;
+                    z-index: 3;
+                    color: white;
+                    text-shadow: 0 1px 1px hsl(205deg 30% 10% / 0.2);
+                }
+
+                .gooey-nav-container nav ul li {
+                    border-radius: 100vw;
+                    position: relative;
+                    cursor: pointer;
+                    transition: color 0.3s ease;
+                    color: white;
+                }
+
+                .gooey-nav-container nav ul li a {
+                    display: inline-block;
+                    padding: 0.6em 1em;
+                    text-decoration: none;
+                }
+
+                .gooey-nav-container nav ul li.active {
+                    color: black;
+                    text-shadow: none;
+                }
+
+                .gooey-nav-container nav ul li.active::after {
+                    content: '';
+                    position: absolute;
+                    inset: 0;
+                    border-radius: 100vw; 
+                    background: white;
+                    opacity: 1;
+                    transform: scale(1);
+                    transition: all 0.3s ease;
+                    z-index: -1;
+                }
+
+                .gooey-nav-container .effect {
+                    position: absolute;
+                    opacity: 1;
+                    pointer-events: none;
+                    display: flex;
+                    justify-content: center;
+                    align-items: center;
+                    z-index: 1;
+                    transition: 
+                        left var(--transition-time) var(--linear-ease),
+                        top var(--transition-time) var(--linear-ease),
+                        width var(--transition-time) var(--linear-ease),
+                        height var(--transition-time) var(--linear-ease);
+                    border-radius: 100vw;
+                }
+
+                .gooey-nav-container .effect.text {
+                    color: white;
+                    transition: color 0.3s ease calc(var(--transition-time) * 0.9);
+                    font-size: 1rem;
+                }
+
+                .gooey-nav-container .effect.text.active {
+                    color: black;
+                    transition: color 0.3s ease;
+                }
+
+                .gooey-nav-container .effect.filter {
+                    filter: url('#goo') blur(7px) contrast(100); 
+                    overflow: visible;
+                }
+
+                .gooey-nav-container .effect.filter::before {
+                    content: '';
+                    position: absolute;
+                    inset: -75px;
+                    z-index: -2;
+                    /* DÜZELTME 2: Filtre arka planını kapsayıcının yeni opak rengine (bg-gray-800 -> #1F2937) ayarladık. */
+                    background: #1F2937; 
+                }
+
+                .gooey-nav-container .effect.filter::after {
+                    content: '';
+                    position: absolute;
+                    inset: 0;
+                    background: white;
+                    transform: scale(0);
+                    opacity: 0;
+                    z-index: -1;
+                    border-radius: 100vw;
+                    animation: pill 0.3s ease both;
+                    animation-delay: calc(var(--transition-time) * 0.9);
+                }
+
+                @keyframes pill {
+                    to {
+                        transform: scale(1);
+                        opacity: 1;
+                    }
+                }
+
+                .particle,
+                .point {
+                    display: block;
+                    opacity: 0;
+                    width: 16px; 
+                    height: 16px; 
+                    border-radius: 100%;
+                    transform-origin: center;
+                }
+                
+                .particle {
+                    --time: 5s; 
+                    position: absolute;
+                    top: calc(50% - 8px); 
+                    left: calc(50% - 8px);
+                    animation: particle var(--time) var(--linear-ease) 1 forwards;
+                }
+
+                .point {
+                    background: var(--color);
+                    opacity: 1;
+                    animation: point var(--time) ease 1 forwards;
+                }
+                
+                @keyframes particle {
+                    0% {
+                        transform: 
+                            rotate(0deg) 
+                            translate(var(--start-x), var(--start-y)) 
+                            scale(0.5);
+                        opacity: 1;
+                        animation-timing-function: cubic-bezier(0.55, 0, 1, 0.45);
+                    }
+
+                    70% {
+                        transform: 
+                            rotate(calc(var(--rotate) * 0.5)) 
+                            translate(calc(var(--end-x) * 1.2), calc(var(--end-y) * 1.2))
+                            scale(1);
+                        opacity: 1;
+                        animation-timing-function: ease;
+                    }
+
+                    100% {
+                        transform: 
+                            rotate(calc(var(--rotate) * 1.2)) 
+                            translate(calc(var(--end-x) * 0.5), calc(var(--end-y) * 0.5))
+                            scale(0);
+                        opacity: 0;
+                    }
+                }
+
+                @keyframes point {
+                    0% {
+                        transform: scale(0);
+                        opacity: 0;
+                    }
+
+                    25% {
+                        transform: scale(calc(var(--scale) * 0.25));
+                        opacity: 1;
+                    }
+                    
+                    65% {
+                        transform: scale(var(--scale));
+                        opacity: 1;
+                    }
+
+                    100% {
+                        transform: scale(0);
+                        opacity: 0;
+                    }
+                }
+
+                @media (max-width: 640px) {
+                    .gooey-nav-container nav ul {
+                        gap: 0.75rem;
+                        flex-wrap: wrap;
+                        justify-content: center;
+                    }
+                    .gooey-nav-container nav ul li a {
+                        padding: 0.4em 0.6em;
+                        font-size: 0.85rem;
+                    }
+                }
+            `}</style>
+            
+            {/* SVG Filter Definition (Hidden) - Gooey Efektinin Çekirdeği */}
+            <svg style={{ position: 'absolute', height: 0, width: 0 }}>
+                <defs>
+                    <filter id="goo">
+                        <feGaussianBlur in="SourceGraphic" stdDeviation="10" result="blur" />
+                        <feColorMatrix in="blur" mode="matrix" values="
+                            1 0 0 0 0
+                            0 1 0 0 0
+                            0 0 1 0 0
+                            0 0 0 20 -7  
+                        " result="goo" />
+                        <feBlend in="SourceGraphic" in2="goo" />
+                    </filter>
+                </defs>
+            </svg>
+        </div>
+    );
+};
+
+export default App;
