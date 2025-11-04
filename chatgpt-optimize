@@ -1,1 +1,120 @@
+import React, { useState } from 'react';
+import './App.css';
 
+export default function ANAN() {
+  const [particleCount, setParticleCount] = useState(15);
+  const [timeVariance, setTimeVariance] = useState(300);
+  const [radiusFactor, setRadiusFactor] = useState(100);
+  const [active, setActive] = useState('A');
+
+  const items = Array.from({ length: 26 }, (_, i) => String.fromCharCode(65 + i)); // A-Z
+
+  const handleClick = (label) => {
+    setActive(label);
+    const button = document.querySelector(`#btn-${label}`);
+    if (button) {
+      const particles = Array.from({ length: particleCount }, (_, i) => {
+        const particle = document.createElement('span');
+        particle.className = 'particle';
+        const angle = (i / particleCount) * 2 * Math.PI;
+        const distance = Math.random() * radiusFactor + 20;
+        particle.style.setProperty('--x', `${Math.cos(angle) * distance}px`);
+        particle.style.setProperty('--y', `${Math.sin(angle) * distance}px`);
+        particle.style.animationDuration = `${600 + Math.random() * timeVariance}ms`;
+        button.appendChild(particle);
+        setTimeout(() => particle.remove(), 700 + timeVariance);
+        return particle;
+      });
+    }
+  };
+
+  return (
+    <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-purple-800 via-purple-600 to-violet-900 text-white gap-10 p-8">
+      <h1 className="text-4xl font-bold mb-8">ANAN - ANİMASYON</h1>
+
+      <nav className="flex flex-wrap gap-3 bg-purple-700/40 p-4 rounded-2xl shadow-lg backdrop-blur-xl border border-purple-500/40 justify-center max-w-[600px]">
+        {items.map((item) => (
+          <button
+            id={`btn-${item}`}
+            key={item}
+            onClick={() => handleClick(item)}
+            className={`relative overflow-hidden px-3 py-1 rounded-full font-semibold text-sm transition ${
+              active === item
+                ? 'bg-fuchsia-500 text-black shadow-lg'
+                : 'hover:bg-purple-500/50'
+            }`}
+          >
+            {item}
+          </button>
+        ))}
+      </nav>
+
+      <div className="bg-purple-900/50 p-6 rounded-2xl shadow-inner border border-purple-700/60 w-[350px]">
+        <h2 className="text-2xl font-semibold mb-4 text-center">Customize</h2>
+        <div className="flex flex-col gap-4">
+          <label className="flex justify-between items-center">
+            <span>Particle Count</span>
+            <input
+              type="number"
+              min="1"
+              max="50"
+              value={particleCount}
+              onChange={(e) => setParticleCount(Number(e.target.value))}
+              className="w-20 p-1 rounded bg-purple-800 border border-purple-600 text-center"
+            />
+          </label>
+          <label className="flex justify-between items-center">
+            <span>Animation Variance</span>
+            <input
+              type="number"
+              min="0"
+              max="1000"
+              value={timeVariance}
+              onChange={(e) => setTimeVariance(Number(e.target.value))}
+              className="w-20 p-1 rounded bg-purple-800 border border-purple-600 text-center"
+            />
+          </label>
+          <label className="flex justify-between items-center">
+            <span>Radius Factor</span>
+            <input
+              type="number"
+              min="10"
+              max="300"
+              value={radiusFactor}
+              onChange={(e) => setRadiusFactor(Number(e.target.value))}
+              className="w-20 p-1 rounded bg-purple-800 border border-purple-600 text-center"
+            />
+          </label>
+        </div>
+      </div>
+
+      <p className="mt-6 text-sm text-purple-200/70 italic">
+        Aktif ayarlar: {particleCount} parçacık, varyans {timeVariance}ms, yarıçap {radiusFactor}
+      </p>
+    </div>
+  );
+}
+
+/* App.css içine eklenecek */
+.particle {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 6px;
+  height: 6px;
+  background: radial-gradient(circle, #ff77ff, transparent);
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  animation: explode var(--time, 0.6s) ease-out forwards;
+}
+
+@keyframes explode {
+  from {
+    transform: translate(-50%, -50%) scale(1);
+    opacity: 1;
+  }
+  to {
+    transform: translate(calc(-50% + var(--x)), calc(-50% + var(--y))) scale(0.3);
+    opacity: 0;
+  }
+}
