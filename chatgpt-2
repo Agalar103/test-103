@@ -1,0 +1,90 @@
+import React, { useState } from 'react';
+
+export default function ANAN() {
+  const [particleCount, setParticleCount] = useState(15);
+  const [timeVariance, setTimeVariance] = useState(300);
+  const [radiusFactor, setRadiusFactor] = useState(100);
+  const [active, setActive] = useState('A');
+
+  const items = Array.from({ length: 26 }, (_, i) => String.fromCharCode(65 + i));
+
+  const handleClick = (label) => {
+    setActive(label);
+    const button = document.querySelector(`#btn-${label}`);
+    if (button) {
+      for (let i = 0; i < particleCount; i++) {
+        const particle = document.createElement('span');
+        particle.className = 'particle';
+        const angle = (i / particleCount) * 2 * Math.PI;
+        const distance = Math.random() * radiusFactor + 20;
+        particle.style.setProperty('--x', `${Math.cos(angle) * distance}px`);
+        particle.style.setProperty('--y', `${Math.sin(angle) * distance}px`);
+        particle.style.setProperty('--time', `${600 + Math.random() * timeVariance}ms`);
+        button.appendChild(particle);
+        setTimeout(() => particle.remove(), 700 + timeVariance);
+      }
+    }
+  };
+
+  return (
+    <>
+      <style>{`
+        body { background: #1a1a2e; color: white; font-family: Arial, sans-serif; margin: 0; }
+        .preview-container { display: flex; flex-direction: column; align-items: center; }
+        .header { text-align: center; padding: 20px; background: #4b0082; width: 100%; }
+        .main { display: flex; flex-direction: column; align-items: center; margin: 20px; }
+        .nav-bar { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; margin-bottom: 20px; }
+        .nav-btn { background: #6a0dad; border: none; color: white; padding: 10px 15px; border-radius: 8px; cursor: pointer; transition: 0.3s; position: relative; overflow: hidden; }
+        .nav-btn.active { background: #ff66ff; color: black; }
+        .nav-btn:hover { transform: scale(1.1); }
+        .particle { position: absolute; width: 6px; height: 6px; border-radius: 50%; background: #ff66ff; animation: fly var(--time) ease-out forwards; }
+        @keyframes fly { to { transform: translate(var(--x), var(--y)) scale(0); opacity: 0; } }
+        .control-panel { background: #3c096c; padding: 20px; border-radius: 12px; display: flex; flex-direction: column; gap: 10px; color: #fff; }
+        .control-panel input { margin-left: 10px; border-radius: 4px; border: none; padding: 5px; }
+        .footer { margin-top: 20px; padding: 10px; background: #4b0082; width: 100%; text-align: center; }
+      `}</style>
+
+      <div className="preview-container">
+        <header className="header">
+          <h1>ANAN - ANİMASYON</h1>
+          <p>Mor tema | Patlama animasyonlu önizleme</p>
+        </header>
+
+        <main className="main">
+          <nav className="nav-bar">
+            {items.map((item) => (
+              <button
+                id={`btn-${item}`}
+                key={item}
+                onClick={() => handleClick(item)}
+                className={`nav-btn ${active === item ? 'active' : ''}`}
+              >
+                {item}
+              </button>
+            ))}
+          </nav>
+
+          <section className="control-panel">
+            <h2>Customize</h2>
+            <label>
+              Particle Count
+              <input type="number" value={particleCount} onChange={(e) => setParticleCount(Number(e.target.value))} />
+            </label>
+            <label>
+              Animation Variance
+              <input type="number" value={timeVariance} onChange={(e) => setTimeVariance(Number(e.target.value))} />
+            </label>
+            <label>
+              Radius Factor
+              <input type="number" value={radiusFactor} onChange={(e) => setRadiusFactor(Number(e.target.value))} />
+            </label>
+          </section>
+        </main>
+
+        <footer className="footer">
+          <p>© 2025 ANAN Tuş Animasyonları | Mor tema | Önizleme alanı</p>
+        </footer>
+      </div>
+    </>
+  );
+}
