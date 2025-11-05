@@ -1,0 +1,1 @@
+çalışıyormu bilmiyorum amk
